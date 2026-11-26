@@ -13,7 +13,7 @@
     <!-- Atmospheric Visor Layers -->
     <div id="vignetteOverlay" class="vignette-frozen"></div>
     <div id="scanlineOverlay"></div>
-    <div class="visor-corners" aria-hidden="true">
+    <div id="visorCorners" class="visor-corners" aria-hidden="true">
       <span class="vc vc-tl"></span>
       <span class="vc vc-tr"></span>
       <span class="vc vc-bl"></span>
@@ -24,9 +24,11 @@
     <div id="stageIntroBanner" class="stage-intro hidden" aria-hidden="true">
       <div class="stage-intro-line"></div>
       <div class="stage-intro-inner">
+        <span class="intro-diamond"></span>
         <span class="stage-intro-code" id="introStageCode">SECTOR 01</span>
         <span class="stage-intro-sep">//</span>
         <span class="stage-intro-title" id="introStageTitle">각성 · AWAKENING</span>
+        <span class="intro-diamond"></span>
       </div>
       <div class="stage-intro-line"></div>
     </div>
@@ -39,7 +41,7 @@
           <div class="hud-stage-top">
             <span class="status-led"></span>
             <span class="hud-stage-badge" id="hudStageNum">STAGE 01 / 10</span>
-            <span class="hud-diff-tag" id="hudDiffTag">SHIELD</span>
+            <span class="hud-diff-tag" id="hudDiffTag">SHIELD 3</span>
           </div>
           <div class="hud-stage-title" id="hudStageName">각성 · AWAKENING</div>
         </div>
@@ -54,6 +56,7 @@
             </div>
             <div class="time-meter">
               <div class="time-meter-fill" id="hudTimeBarFill"></div>
+              <div class="time-meter-ticks" aria-hidden="true"></div>
             </div>
           </div>
 
@@ -138,7 +141,7 @@
       <!-- Bottom HUD -->
       <div class="hud-bottom">
         <div class="hud-bottom-left">
-          <div class="hud-panel hp-module">
+          <div class="hud-panel hp-module" id="hudHpModule">
             <div class="module-header">
               <span class="module-title">
                 <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M8 1L2 3.5v4.2c0 3.7 2.6 6.7 6 7.8 3.4-1.1 6-4.1 6-7.8V3.5L8 1z"/></svg>
@@ -179,12 +182,22 @@
     <!-- Title Screen -->
     <div id="screenTitle" class="overlay-screen overlay-title">
       <div class="title-shell">
+        <div class="shell-grid-bg" aria-hidden="true"></div>
         <div class="title-top-bar">
           <span class="sys-tag"><span class="status-led"></span>CHRONO.OS // TACTICAL COMBAT SIM</span>
-          <span class="sys-tag" id="titleProgressInfo">CLEARED 00 / 10</span>
+          <span class="sys-tag sys-progress" id="titleProgressInfo">CLEARED 00 / 10</span>
         </div>
 
         <div class="title-hero">
+          <div class="title-emblem" aria-hidden="true">
+            <svg viewBox="0 0 44 44" width="38" height="38" fill="none">
+              <circle cx="22" cy="22" r="18" stroke="rgba(0,240,255,0.42)" stroke-width="1.4" stroke-dasharray="6 4"/>
+              <circle cx="22" cy="22" r="12" stroke="rgba(0,240,255,0.22)" stroke-width="1"/>
+              <path d="M9 35L35 9" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"/>
+              <path d="M9 35L35 9" stroke="#00f0ff" stroke-width="5.5" stroke-opacity="0.32" stroke-linecap="round"/>
+              <circle cx="22" cy="22" r="3" fill="#ff2e55"/>
+            </svg>
+          </div>
           <div class="title-slash-beam" aria-hidden="true"></div>
           <div class="title-eyebrow">TIME MOVES ONLY WHEN YOU MOVE</div>
           <h1 class="game-logo" aria-label="CHRONO SLASH">
@@ -200,7 +213,7 @@
 
         <div class="title-cta-panel">
           <div class="title-buttons">
-            <button id="btnPlay" class="btn-primary btn-hero">
+            <button id="btnPlay" class="btn-primary btn-hero btn-pulse">
               <span class="btn-main-row">
                 <svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor"><polygon points="3,2 14,8 3,14"/></svg>
                 <span>출격 시작</span>
@@ -248,7 +261,7 @@
               <div class="ctrl-desc">대시 베기 · 처치/패링 시 쿨타임 즉시 초기화</div>
             </div>
           </div>
-          <div class="ctrl-item">
+          <div class="ctrl-item ctrl-item-gold">
             <div class="ctrl-icon ctrl-icon-gold">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M8 12l4-4 4 4-4 4-4-4z"/></svg>
             </div>
@@ -280,7 +293,7 @@
       <div class="modal-card modal-wide">
         <div class="modal-header">
           <div>
-            <div class="modal-eyebrow">OPERATION ARCHIVE // 10 SECTORS</div>
+            <div class="modal-eyebrow">OPERATION ARCHIVE // TACTICAL BLUEPRINTS</div>
             <h2>스테이지 선택</h2>
           </div>
           <div class="archive-summary">
@@ -310,6 +323,7 @@
       <div class="modal-card modal-compact">
         <div class="modal-eyebrow">SYSTEM SUSPENDED</div>
         <h2>일시 정지</h2>
+        <div class="pause-sector-pill" id="pauseStageLabel">SECTOR 01 // 각성</div>
         <div class="modal-btn-col">
           <button id="btnResume" class="btn-primary">계속하기 <kbd>ESC</kbd></button>
           <button id="btnPauseRestart" class="btn-secondary">현재 스테이지 재시작 <kbd>R</kbd></button>
@@ -349,7 +363,10 @@
           </div>
           <div class="rank-badge-wrap">
             <span class="rank-caption">RANK</span>
-            <div class="rank-stamp" id="clearRank">S</div>
+            <div class="rank-orbital">
+              <div class="rank-ring" id="clearRankRing" aria-hidden="true"></div>
+              <div class="rank-stamp" id="clearRank">S</div>
+            </div>
           </div>
         </div>
 
@@ -387,9 +404,25 @@
     <!-- Campaign Complete Victory Overlay -->
     <div id="screenVictory" class="overlay-screen hidden">
       <div class="modal-card victory-card">
-        <div class="modal-eyebrow">ALL SECTORS LIBERATED // MISSION COMPLETE</div>
-        <h2 class="victory-title">CHRONO PROTOCOL COMPLETE</h2>
-        <p class="victory-sub">모든 보안 구역과 크로노스 워든을 완벽하게 제압했습니다.</p>
+        <div class="victory-header">
+          <div class="victory-head-copy">
+            <div class="victory-emblem-row">
+              <span class="victory-crest" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 16.9 6.1 20l1.2-6.5L2.5 8.9l6.6-.9z"/></svg>
+              </span>
+              <div class="modal-eyebrow">ALL SECTORS LIBERATED // MISSION COMPLETE</div>
+            </div>
+            <h2 class="victory-title">CHRONO PROTOCOL COMPLETE</h2>
+            <p class="victory-sub">모든 보안 구역과 크로노스 워든을 완벽하게 제압했습니다.</p>
+          </div>
+          <div class="rank-badge-wrap">
+            <span class="rank-caption">OVERALL</span>
+            <div class="rank-orbital">
+              <div class="rank-ring rank-ring-gold" aria-hidden="true"></div>
+              <div class="rank-stamp stamp-S" id="victoryRankStamp">S</div>
+            </div>
+          </div>
+        </div>
 
         <div class="clear-stats-grid">
           <div class="clear-stat">
