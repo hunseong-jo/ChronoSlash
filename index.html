@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CHRONO SLASH — 시간 정지 네온 액션</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Atmospheric Visor Layers -->
+    <div id="vignetteOverlay" class="vignette-frozen"></div>
+    <div id="scanlineOverlay"></div>
+    <div class="visor-corners" aria-hidden="true">
+      <span class="vc vc-tl"></span>
+      <span class="vc vc-tr"></span>
+      <span class="vc vc-bl"></span>
+      <span class="vc vc-br"></span>
+    </div>
+
+    <!-- Stage Intro Ribbon (fades out cleanly without blocking play) -->
+    <div id="stageIntroBanner" class="stage-intro hidden" aria-hidden="true">
+      <div class="stage-intro-line"></div>
+      <div class="stage-intro-inner">
+        <span class="stage-intro-code" id="introStageCode">SECTOR 01</span>
+        <span class="stage-intro-sep">//</span>
+        <span class="stage-intro-title" id="introStageTitle">각성 · AWAKENING</span>
+      </div>
+      <div class="stage-intro-line"></div>
+    </div>
+
+    <!-- In-Game HUD -->
+    <div id="hud" class="hidden">
+      <div class="hud-top">
+        <!-- Left: Sector Identity -->
+        <div class="hud-panel hud-stage">
+          <div class="hud-stage-top">
+            <span class="status-led"></span>
+            <span class="hud-stage-badge" id="hudStageNum">STAGE 01 / 10</span>
+            <span class="hud-diff-tag" id="hudDiffTag">SHIELD</span>
+          </div>
+          <div class="hud-stage-title" id="hudStageName">각성 · AWAKENING</div>
+        </div>
+
+        <!-- Center: Chrono Time-Dilation Visor + Boss Bar -->
+        <div class="hud-center">
+          <div class="time-visor" id="hudTimePill">
+            <div class="time-visor-row">
+              <span class="time-dot"></span>
+              <span class="time-label" id="hudTimeState">TIME FROZEN</span>
+              <span class="time-rate" id="hudTimeRate">0.02x</span>
+            </div>
+            <div class="time-meter">
+              <div class="time-meter-fill" id="hudTimeBarFill"></div>
+            </div>
+          </div>
+
+          <div id="hudBossBar" class="boss-bar hidden">
+            <div class="boss-bar-header">
+              <span class="boss-tag">
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M8 1l2.2 4.5L15 6.3l-3.5 3.4.8 4.8L8 12.2 3.7 14.5l.8-4.8L1 6.3l4.8-.8z"/></svg>
+                <span id="hudBossName">CHRONOS WARDEN</span>
+              </span>
+              <span class="boss-hp-text" id="hudBossHpText">4 / 4</span>
+            </div>
+            <div class="boss-segments" id="hudBossSegments">
+              <span class="boss-seg active"></span>
+              <span class="boss-seg active"></span>
+              <span class="boss-seg active"></span>
+              <span class="boss-seg active"></span>
+            </div>
+            <div class="boss-bar-track hidden">
+              <div class="boss-bar-fill" id="hudBossHpFill"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Combat Telemetry & Icon Actions -->
+        <div class="hud-right">
+          <div class="hud-panel telemetry-bar">
+            <div class="stat-cell">
+              <span class="stat-label">HOSTILES</span>
+              <span class="stat-val accent-red" id="hudEnemies">03</span>
+            </div>
+            <span class="stat-divider"></span>
+            <div class="stat-cell">
+              <span class="stat-label">PARRY</span>
+              <span class="stat-val accent-gold" id="hudParries">0</span>
+            </div>
+            <span class="stat-divider"></span>
+            <div class="stat-cell stat-time">
+              <span class="stat-label">CLOCK</span>
+              <span class="stat-val accent-cyan" id="hudTime">00.00s</span>
+            </div>
+          </div>
+
+          <div class="hud-actions">
+            <button id="btnRestartHud" class="icon-btn" title="재시작 (R)" aria-label="재시작">
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>
+              </svg>
+            </button>
+            <button id="btnMute" class="icon-btn" title="음소거 (M)" aria-label="음소거">
+              <svg id="iconSoundOn" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+              </svg>
+              <svg id="iconSoundOff" class="hidden" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <line x1="23" y1="9" x2="17" y2="15"/>
+                <line x1="17" y1="9" x2="23" y2="15"/>
+              </svg>
+            </button>
+            <button id="btnPause" class="icon-btn" title="일시정지 (ESC)" aria-label="일시정지">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <rect x="6" y="4" width="4" height="16" rx="1"/>
+                <rect x="14" y="4" width="4" height="16" rx="1"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kinetic Combo Floating Badge -->
+      <div id="hudCombo" class="combo-box hidden">
+        <div class="combo-header">
+          <span class="combo-num" id="hudComboValue">2x</span>
+          <span class="combo-label">CHAIN<br/>KILL</span>
+        </div>
+        <div class="combo-decay-track">
+          <div class="combo-decay-fill" id="hudComboBar"></div>
+        </div>
+      </div>
+
+      <!-- Bottom HUD -->
+      <div class="hud-bottom">
+        <div class="hud-bottom-left">
+          <div class="hud-panel hp-module">
+            <div class="module-header">
+              <span class="module-title">
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M8 1L2 3.5v4.2c0 3.7 2.6 6.7 6 7.8 3.4-1.1 6-4.1 6-7.8V3.5L8 1z"/></svg>
+                SHIELD
+              </span>
+              <span id="hudHpLabel" class="dash-ready">3 / 3</span>
+            </div>
+            <div class="hp-pips" id="hudHpPips">
+              <span class="hp-pip active"></span>
+              <span class="hp-pip active"></span>
+              <span class="hp-pip active"></span>
+            </div>
+          </div>
+
+          <div class="hud-panel dash-module" id="hudDashModule">
+            <div class="module-header">
+              <span class="module-title">
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M9.5 1L3 9h4.5L6.5 15 13 7H8.5L9.5 1z"/></svg>
+                DASH SLASH
+              </span>
+              <span id="hudDashLabel" class="dash-ready">READY</span>
+            </div>
+            <div class="dash-track">
+              <div class="dash-fill" id="hudDashFill"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls-strip">
+          <span class="ctrl-pill"><kbd>WASD</kbd> 이동 · 시간 가속</span>
+          <span class="ctrl-pill"><kbd>LMB</kbd> <kbd>SPACE</kbd> 대시 베기 · 패링</span>
+          <span class="ctrl-pill"><kbd>RMB</kbd> <kbd>SHIFT</kbd> 시간 흘리기</span>
+          <span class="ctrl-pill"><kbd>R</kbd> 즉시 재시작</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Title Screen -->
+    <div id="screenTitle" class="overlay-screen overlay-title">
+      <div class="title-shell">
+        <div class="title-top-bar">
+          <span class="sys-tag"><span class="status-led"></span>CHRONO.OS // TACTICAL COMBAT SIM</span>
+          <span class="sys-tag" id="titleProgressInfo">CLEARED 00 / 10</span>
+        </div>
+
+        <div class="title-hero">
+          <div class="title-slash-beam" aria-hidden="true"></div>
+          <div class="title-eyebrow">TIME MOVES ONLY WHEN YOU MOVE</div>
+          <h1 class="game-logo" aria-label="CHRONO SLASH">
+            <span class="logo-chrono">CHRONO</span>
+            <span class="logo-divider">//</span>
+            <span class="logo-slash">SLASH</span>
+          </h1>
+          <p class="title-tagline">
+            내가 움직일 때만 시간이 흐른다.<br />
+            멈춘 탄막 사이를 가르고, <strong>카타나 패링</strong>으로 총알을 되돌려 보내라.
+          </p>
+        </div>
+
+        <div class="title-cta-panel">
+          <div class="title-buttons">
+            <button id="btnPlay" class="btn-primary btn-hero">
+              <span class="btn-main-row">
+                <svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor"><polygon points="3,2 14,8 3,14"/></svg>
+                <span>출격 시작</span>
+              </span>
+              <small>DEPLOY · STAGE 01</small>
+            </button>
+            <button id="btnStageSelect" class="btn-secondary btn-hero">
+              <span class="btn-main-row">
+                <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="1.5" y="2" width="5" height="5"/><rect x="9.5" y="2" width="5" height="5"/><rect x="1.5" y="9" width="5" height="5"/><rect x="9.5" y="9" width="5" height="5"/></svg>
+                <span>스테이지 선택</span>
+              </span>
+              <small>10 SECTORS + BOSS</small>
+            </button>
+          </div>
+
+          <div class="difficulty-row">
+            <span class="diff-caption">PROTOCOL</span>
+            <div class="diff-toggle" role="group" aria-label="난이도 선택">
+              <button id="btnDiffNormal" class="diff-btn active">
+                <span class="diff-dot"></span>일반 · 실드 3칸 (추천)
+              </button>
+              <button id="btnDiffHardcore" class="diff-btn">
+                <span class="diff-dot"></span>하드코어 · 1격사
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="title-controls-grid">
+          <div class="ctrl-item">
+            <div class="ctrl-icon">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="3" width="6" height="6" rx="1"/><rect x="3" y="12" width="6" height="6" rx="1"/><rect x="9" y="12" width="6" height="6" rx="1"/><rect x="15" y="12" width="6" height="6" rx="1"/></svg>
+            </div>
+            <div>
+              <div class="ctrl-key">WASD / 방향키</div>
+              <div class="ctrl-desc">이동 시 시간 가속 · 정지 시 초슬로우</div>
+            </div>
+          </div>
+          <div class="ctrl-item">
+            <div class="ctrl-icon">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.5 4.5L20 10l-9 9H5.5v-5.5l9-9z"/><path d="M12 7l5 5"/></svg>
+            </div>
+            <div>
+              <div class="ctrl-key">좌클릭 / SPACE</div>
+              <div class="ctrl-desc">대시 베기 · 처치/패링 시 쿨타임 즉시 초기화</div>
+            </div>
+          </div>
+          <div class="ctrl-item">
+            <div class="ctrl-icon ctrl-icon-gold">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path d="M8 12l4-4 4 4-4 4-4-4z"/></svg>
+            </div>
+            <div>
+              <div class="ctrl-key accent-gold">탄환 패링 (DEFLECT)</div>
+              <div class="ctrl-desc">날아오는 총알을 베어 조준 방향으로 반사</div>
+            </div>
+          </div>
+          <div class="ctrl-item">
+            <div class="ctrl-icon">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>
+            </div>
+            <div>
+              <div class="ctrl-key">우클릭 / SHIFT</div>
+              <div class="ctrl-desc">제자리에서 시간만 흘려 타이밍 조절</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="title-bottom-bar">
+          <span>HTML5 CANVAS · WEB AUDIO SYNTH</span>
+          <span>M 음소거 · ESC 일시정지 · R 즉시 재도전</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage Select Screen -->
+    <div id="screenStageSelect" class="overlay-screen hidden">
+      <div class="modal-card modal-wide">
+        <div class="modal-header">
+          <div>
+            <div class="modal-eyebrow">OPERATION ARCHIVE // 10 SECTORS</div>
+            <h2>스테이지 선택</h2>
+          </div>
+          <div class="archive-summary">
+            <div class="archive-stat">
+              <span class="archive-label">PROGRESS</span>
+              <span class="archive-val accent-cyan" id="archiveClearedText">0 / 10</span>
+            </div>
+            <div class="archive-stat">
+              <span class="archive-label">S-RANKS</span>
+              <span class="archive-val accent-gold" id="archiveSRankText">0</span>
+            </div>
+            <button id="btnCloseStageSelect" class="btn-ghost">← 돌아가기</button>
+          </div>
+        </div>
+        <div class="archive-progress-track">
+          <div class="archive-progress-fill" id="archiveProgressFill"></div>
+        </div>
+        <div id="stageGrid" class="stage-grid"></div>
+        <div class="stage-select-note">
+          * 시연 및 자유 연습을 위해 전 10개 스테이지(최종 보스 포함)에 바로 진입할 수 있습니다.
+        </div>
+      </div>
+    </div>
+
+    <!-- Pause Screen -->
+    <div id="screenPause" class="overlay-screen hidden">
+      <div class="modal-card modal-compact">
+        <div class="modal-eyebrow">SYSTEM SUSPENDED</div>
+        <h2>일시 정지</h2>
+        <div class="modal-btn-col">
+          <button id="btnResume" class="btn-primary">계속하기 <kbd>ESC</kbd></button>
+          <button id="btnPauseRestart" class="btn-secondary">현재 스테이지 재시작 <kbd>R</kbd></button>
+          <button id="btnPauseStages" class="btn-secondary">스테이지 선택</button>
+          <button id="btnPauseTitle" class="btn-ghost">타이틀로 돌아가기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Death / Retry Overlay (Cyber-Tape Strip) -->
+    <div id="screenDeath" class="overlay-screen overlay-death hidden">
+      <div class="death-strip">
+        <div class="hazard-tape"></div>
+        <div class="death-content">
+          <div class="death-code">ERR // CHRONO_LINK_SEVERED</div>
+          <div class="death-glitch" data-text="SIGNAL TERMINATED">SIGNAL TERMINATED</div>
+          <div class="death-reason" id="deathReason">탄환에 피격되었습니다</div>
+          <div class="death-actions">
+            <button id="btnDeathRetry" class="btn-danger">
+              <span>즉시 재도전</span>
+              <kbd>R</kbd> <kbd>SPACE</kbd>
+            </button>
+            <button id="btnDeathStages" class="btn-ghost">스테이지 선택</button>
+          </div>
+        </div>
+        <div class="hazard-tape"></div>
+      </div>
+    </div>
+
+    <!-- Stage Clear Overlay -->
+    <div id="screenClear" class="overlay-screen hidden">
+      <div class="modal-card clear-card">
+        <div class="clear-top">
+          <div>
+            <div class="modal-eyebrow">SECTOR SECURED // DEBRIEF</div>
+            <h2 id="clearStageTitle">STAGE 01 CLEAR</h2>
+          </div>
+          <div class="rank-badge-wrap">
+            <span class="rank-caption">RANK</span>
+            <div class="rank-stamp" id="clearRank">S</div>
+          </div>
+        </div>
+
+        <div class="clear-stats-grid">
+          <div class="clear-stat">
+            <span class="cs-label">클리어 타임</span>
+            <span class="cs-val accent-cyan" id="clearTime">00.00s</span>
+            <span class="cs-sub" id="clearParTime">S 목표: 9.0s</span>
+          </div>
+          <div class="clear-stat">
+            <span class="cs-label">탄환 패링</span>
+            <span class="cs-val accent-gold" id="clearParries">0</span>
+            <span class="cs-sub">DEFLECTED SHOTS</span>
+          </div>
+          <div class="clear-stat">
+            <span class="cs-label">최대 연쇄</span>
+            <span class="cs-val accent-pink" id="clearMaxCombo">0x</span>
+            <span class="cs-sub">MAX CHAIN</span>
+          </div>
+          <div class="clear-stat">
+            <span class="cs-label">재도전 횟수</span>
+            <span class="cs-val" id="clearDeaths">0</span>
+            <span class="cs-sub">RETRIES</span>
+          </div>
+        </div>
+
+        <div class="clear-buttons">
+          <button id="btnClearStages" class="btn-ghost">스테이지 목록</button>
+          <button id="btnClearRetry" class="btn-secondary">기록 갱신 <kbd>R</kbd></button>
+          <button id="btnNextStage" class="btn-primary">다음 스테이지 <kbd>SPACE</kbd></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Campaign Complete Victory Overlay -->
+    <div id="screenVictory" class="overlay-screen hidden">
+      <div class="modal-card victory-card">
+        <div class="modal-eyebrow">ALL SECTORS LIBERATED // MISSION COMPLETE</div>
+        <h2 class="victory-title">CHRONO PROTOCOL COMPLETE</h2>
+        <p class="victory-sub">모든 보안 구역과 크로노스 워든을 완벽하게 제압했습니다.</p>
+
+        <div class="clear-stats-grid">
+          <div class="clear-stat">
+            <span class="cs-label">총 클리어 타임</span>
+            <span class="cs-val accent-cyan" id="victoryTotalTime">00.0s</span>
+          </div>
+          <div class="clear-stat">
+            <span class="cs-label">총 탄환 패링</span>
+            <span class="cs-val accent-gold" id="victoryTotalParries">0</span>
+          </div>
+          <div class="clear-stat">
+            <span class="cs-label">총 재도전</span>
+            <span class="cs-val" id="victoryTotalDeaths">0</span>
+          </div>
+          <div class="clear-stat">
+            <span class="cs-label">종합 랭크</span>
+            <span class="cs-val accent-pink" id="victoryRank">S</span>
+          </div>
+        </div>
+
+        <div class="clear-buttons">
+          <button id="btnVictoryTitle" class="btn-ghost">타이틀로</button>
+          <button id="btnVictoryStages" class="btn-secondary">스테이지 선택</button>
+          <button id="btnVictoryReplay" class="btn-primary">1스테이지부터 다시 도전</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/audio.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
